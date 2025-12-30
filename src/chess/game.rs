@@ -200,20 +200,21 @@ impl Game {
 
         for m in &self.moves {
             let san = San::from_move(&pos, m).to_string();
+            let is_white_move = pos.turn() == Color::White;
             pos = pos.play(m).expect("Stored move should be valid");
 
-            if white_move.is_none() {
-                // This is white's move (or black's first move if initial position was black to move)
-                if self.initial_position.turn() == Color::White {
-                    white_move = Some(san);
-                } else {
-                    // Black to move initially
-                    result.push((move_num, "...".to_string(), Some(san)));
-                    move_num += 1;
-                }
+            if is_white_move {
+                // White's move - store it and wait for black's response
+                white_move = Some(san);
             } else {
-                // This is black's move
-                result.push((move_num, white_move.take().unwrap(), Some(san)));
+                // Black's move
+                if let Some(w) = white_move.take() {
+                    // Pair with white's move
+                    result.push((move_num, w, Some(san)));
+                } else {
+                    // Black moved first (from a FEN position)
+                    result.push((move_num, "...".to_string(), Some(san)));
+                }
                 move_num += 1;
             }
         }

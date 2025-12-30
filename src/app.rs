@@ -570,7 +570,7 @@ impl App {
             }
         );
         let title_widget = ratatui::widgets::Paragraph::new(title)
-            .style(ratatui::style::Style::default().bg(ratatui::style::Color::Blue));
+            .style(ratatui::style::Style::default().fg(ratatui::style::Color::Cyan));
         frame.render_widget(title_widget, main_chunks[0]);
 
         // Main content: horizontal split into (board + analysis) | moves
