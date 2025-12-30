@@ -38,5 +38,5 @@ lazychess
 
 ### Analysis
 
-- `Space` - Pause/resume engine analysis
+- `1`, `2`, `3` - Play the best move from analysis line 1, 2, or 3
 - The evaluation is shown from the perspective of the side to move (+ is better for them)

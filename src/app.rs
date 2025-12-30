@@ -352,6 +352,11 @@ impl App {
             KeyCode::Enter | KeyCode::Char(':') => {
                 self.input.enter_command_mode();
             }
+            KeyCode::Char(c @ '1'..='9') => {
+                // Play the best move from the selected analysis line
+                let line_idx = (c as usize) - ('1' as usize);
+                self.play_analysis_line(line_idx)?;
+            }
             KeyCode::Char(c) if c.is_alphabetic() => {
                 // Start typing a move
                 self.input.enter_command_mode();
@@ -524,6 +529,39 @@ impl App {
             self.game.make_move_san(clean_move)?;
         }
 
+        Ok(())
+    }
+
+    /// Play the first move from an analysis line
+    fn play_analysis_line(&mut self, line_idx: usize) -> Result<()> {
+        // Check if we have this analysis line
+        if let Some(info) = self.analysis.lines.get(line_idx) {
+            if let Some(uci_move) = info.pv.first() {
+                // Parse the UCI move and convert to a legal move
+                if let Ok(uci) = uci_move.parse::<shakmaty::uci::UciMove>() {
+                    if let Ok(m) = uci.to_move(self.game.position()) {
+                        // Convert to SAN for make_move_san
+                        let san = shakmaty::san::San::from_move(self.game.position(), &m);
+                        match self.game.make_move_san(&san.to_string()) {
+                            Ok(_) => {
+                                self.start_analysis()?;
+                            }
+                            Err(e) => {
+                                self.input.set_error(format!("Failed to play move: {}", e));
+                            }
+                        }
+                    } else {
+                        self.input.set_error("Invalid move from engine");
+                    }
+                } else {
+                    self.input.set_error("Failed to parse engine move");
+                }
+            } else {
+                self.input.set_error(format!("No moves in line {}", line_idx + 1));
+            }
+        } else {
+            self.input.set_error(format!("No analysis line {}", line_idx + 1));
+        }
         Ok(())
     }
 
