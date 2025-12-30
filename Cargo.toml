@@ -1,0 +1,36 @@
+[package]
+name = "lazychess"
+version = "0.1.0"
+edition = "2021"
+description = "A chess analysis TUI tool with Stockfish integration"
+license = "GPL-3.0"
+authors = ["Ben"]
+
+[dependencies]
+# TUI
+ratatui = "0.29"
+crossterm = "0.28"
+
+# Chess
+shakmaty = "0.27"
+
+# UCI Protocol
+vampirc-uci = "0.11"
+
+# Async
+tokio = { version = "1", features = ["full"] }
+
+# Config & Serialization
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+dirs = "5"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Error handling
+anyhow = "1"
+which = "7"
+
+# Clipboard
+arboard = "3"
