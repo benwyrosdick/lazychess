@@ -10,8 +10,9 @@ use crate::chess::Game;
 use crate::config::Config;
 use crate::engine::{Engine, EngineEvent};
 use crate::ui::{
-    AnalysisState, AnalysisWidget, BoardWidget, DepthPopup, HelpBarWidget, HelpPopup,
-    ImportPopup, InputMode, InputState, InputWidget, MovesWidget, MultiPVPopup, StatusWidget,
+    AnalysisState, AnalysisWidget, BoardWidget, DepthPopup, HelpBarWidget,
+    HelpPopup, ImportPopup, InputMode, InputState, InputWidget, MovesWidget, MultiPVPopup,
+    StatusWidget,
 };
 
 /// Popup state
@@ -624,7 +625,7 @@ impl App {
         let left_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(20), // Board (8*2 rows + 2 border + 1 coords + 1 status)
+                Constraint::Length(22), // Board (8*2 rows + 2 border + 1 coords + 2 captured + 1 status)
                 Constraint::Min(8),     // Analysis
             ])
             .split(content_chunks[0]);
@@ -633,12 +634,12 @@ impl App {
         let board_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Min(10),   // Board
+                Constraint::Min(10),   // Board with captured pieces inside
                 Constraint::Length(1), // Status
             ])
             .split(left_chunks[0]);
 
-        // Render board
+        // Render board (captured pieces are now inside the board pane)
         let board_widget = BoardWidget::new(&self.game, &self.config.ui);
         frame.render_widget(board_widget, board_chunks[0]);
 

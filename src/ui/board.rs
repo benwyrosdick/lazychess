@@ -4,7 +4,7 @@ use ratatui::{
     style::{Color, Style},
     widgets::{Block, Borders, Widget},
 };
-use shakmaty::{File, Move, Rank, Square};
+use shakmaty::{File, Move, Piece, Rank, Role, Square};
 
 use crate::chess::{piece_to_char, Game, PieceStyle};
 use crate::config::UiConfig;
@@ -15,6 +15,8 @@ pub struct BoardWidget<'a> {
     config: &'a UiConfig,
     last_move: Option<&'a Move>,
     piece_style: PieceStyle,
+    /// Show captured pieces inside the board pane
+    show_captured: bool,
 }
 
 impl<'a> BoardWidget<'a> {
@@ -24,6 +26,88 @@ impl<'a> BoardWidget<'a> {
             config,
             last_move: game.last_move(),
             piece_style: config.get_piece_style(),
+            show_captured: true,
+        }
+    }
+
+    fn render_captured_pieces(&self, area: Rect, buf: &mut Buffer, show_white_captures: bool) {
+        if area.width < 2 || area.height < 1 {
+            return;
+        }
+
+        let (white_captured, black_captured) = self.game.captured_pieces();
+        let material_balance = self.game.material_balance();
+
+        // Get the pieces to display
+        let pieces = if show_white_captures {
+            &white_captured
+        } else {
+            &black_captured
+        };
+
+        // Calculate material advantage for this side
+        let advantage = if show_white_captures {
+            if material_balance > 0 {
+                Some(material_balance / 100)
+            } else {
+                None
+            }
+        } else {
+            if material_balance < 0 {
+                Some(-material_balance / 100)
+            } else {
+                None
+            }
+        };
+
+        // Build horizontal display string
+        let piece_order = [Role::Queen, Role::Rook, Role::Bishop, Role::Knight, Role::Pawn];
+        let mut display_parts: Vec<(String, Color)> = Vec::new();
+
+        for role in piece_order {
+            let count = pieces.iter().filter(|&&r| r == role).count();
+            if count > 0 {
+                let color = if show_white_captures {
+                    shakmaty::Color::Black
+                } else {
+                    shakmaty::Color::White
+                };
+                let piece = Piece { color, role };
+                let piece_char = piece_to_char(piece, self.piece_style);
+
+                let fg_color = if piece.color == shakmaty::Color::White {
+                    Color::White
+                } else {
+                    Color::DarkGray
+                };
+
+                // Show piece repeated by count
+                for _ in 0..count {
+                    display_parts.push((format!("{}", piece_char), fg_color));
+                }
+            }
+        }
+
+        // Render horizontally
+        let mut x = area.x;
+        for (text, fg_color) in &display_parts {
+            if x >= area.x + area.width {
+                break;
+            }
+            buf.set_string(x, area.y, text, Style::default().fg(*fg_color));
+            x += text.chars().count() as u16;
+        }
+
+        // Show material advantage at the end if this side is ahead
+        if let Some(adv) = advantage {
+            if adv > 0 && x < area.x + area.width {
+                buf.set_string(
+                    x,
+                    area.y,
+                    format!("+{}", adv),
+                    Style::default().fg(Color::Green),
+                );
+            }
         }
     }
 
@@ -85,10 +169,20 @@ impl Widget for BoardWidget<'_> {
         let coord_width = if self.config.show_coordinates { 3 } else { 0 };
         let _coord_height = if self.config.show_coordinates { 1 } else { 0 };
 
+        // Reserve space for captured pieces (1 line each at top and bottom)
+        let captured_height = if self.show_captured { 1 } else { 0 };
+
         // Center the board horizontally in the available space
         let total_width = board_width + coord_width;
         let start_x = inner.x + (inner.width.saturating_sub(total_width)) / 2 + coord_width;
-        let start_y = inner.y;
+        let start_y = inner.y + captured_height;
+
+        // Render top captured pieces (opponent's pieces when board is not flipped)
+        if self.show_captured {
+            let top_captures_white = self.config.flip_board;
+            let top_area = Rect::new(start_x, inner.y, board_width, 1);
+            self.render_captured_pieces(top_area, buf, top_captures_white);
+        }
 
         // Determine rank/file order based on flip
         let ranks: Vec<Rank> = if self.config.flip_board {
@@ -178,6 +272,17 @@ impl Widget for BoardWidget<'_> {
                 }
             }
         }
+
+        // Render bottom captured pieces (our pieces when board is not flipped)
+        if self.show_captured {
+            let bottom_captures_white = !self.config.flip_board;
+            let coord_offset = if self.config.show_coordinates { 1 } else { 0 };
+            let bottom_y = start_y + board_height + coord_offset;
+            if bottom_y < inner.y + inner.height {
+                let bottom_area = Rect::new(start_x, bottom_y, board_width, 1);
+                self.render_captured_pieces(bottom_area, buf, bottom_captures_white);
+            }
+        }
     }
 }
 
@@ -244,3 +349,5 @@ impl Widget for StatusWidget<'_> {
         );
     }
 }
+
+

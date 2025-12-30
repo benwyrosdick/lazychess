@@ -236,6 +236,69 @@ impl Game {
     pub fn outcome(&self) -> Option<shakmaty::Outcome> {
         self.position.outcome()
     }
+
+    /// Get captured pieces for each side
+    /// Returns (white_captured, black_captured) where each is a list of roles
+    /// white_captured = pieces that white has captured (black pieces that are gone)
+    /// black_captured = pieces that black has captured (white pieces that are gone)
+    pub fn captured_pieces(&self) -> (Vec<Role>, Vec<Role>) {
+        // Standard starting material for each side
+        let starting_material: [(Role, u8); 5] = [
+            (Role::Queen, 1),
+            (Role::Rook, 2),
+            (Role::Bishop, 2),
+            (Role::Knight, 2),
+            (Role::Pawn, 8),
+        ];
+
+        let board = self.position.board();
+
+        // Count current pieces for each side
+        let mut white_captured: Vec<Role> = Vec::new(); // Black pieces captured by white
+        let mut black_captured: Vec<Role> = Vec::new(); // White pieces captured by black
+
+        for (role, starting_count) in starting_material {
+            // Count how many of this piece type each side currently has
+            let white_count = board.by_color(Color::White).intersect(board.by_role(role)).count() as u8;
+            let black_count = board.by_color(Color::Black).intersect(board.by_role(role)).count() as u8;
+
+            // White captured = starting black pieces - current black pieces
+            let white_captures = starting_count.saturating_sub(black_count);
+            for _ in 0..white_captures {
+                white_captured.push(role);
+            }
+
+            // Black captured = starting white pieces - current white pieces
+            let black_captures = starting_count.saturating_sub(white_count);
+            for _ in 0..black_captures {
+                black_captured.push(role);
+            }
+        }
+
+        (white_captured, black_captured)
+    }
+
+    /// Get material advantage in centipawns (positive = white advantage)
+    pub fn material_balance(&self) -> i32 {
+        let piece_values: [(Role, i32); 5] = [
+            (Role::Queen, 900),
+            (Role::Rook, 500),
+            (Role::Bishop, 330),
+            (Role::Knight, 320),
+            (Role::Pawn, 100),
+        ];
+
+        let board = self.position.board();
+        let mut balance = 0;
+
+        for (role, value) in piece_values {
+            let white_count = board.by_color(Color::White).intersect(board.by_role(role)).count() as i32;
+            let black_count = board.by_color(Color::Black).intersect(board.by_role(role)).count() as i32;
+            balance += (white_count - black_count) * value;
+        }
+
+        balance
+    }
 }
 
 /// Convert a square to algebraic notation
