@@ -41,6 +41,10 @@ struct Args {
     /// Path to Stockfish binary
     #[arg(short, long)]
     stockfish: Option<String>,
+
+    /// Piece style: "nerd" (default), "unicode", or "ascii"
+    #[arg(long, default_value = "nerd")]
+    pieces: String,
 }
 
 fn main() -> Result<()> {
@@ -59,6 +63,7 @@ fn main() -> Result<()> {
     if let Some(stockfish) = args.stockfish {
         config.engine.path = Some(stockfish);
     }
+    config.ui.piece_style = args.pieces;
 
     // Setup terminal
     enable_raw_mode()?;

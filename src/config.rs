@@ -33,6 +33,13 @@ pub struct UiConfig {
     pub show_coordinates: bool,
     /// Highlight the last move
     pub highlight_last_move: bool,
+    /// Piece display style: "unicode", "nerd", or "ascii"
+    #[serde(default = "default_piece_style")]
+    pub piece_style: String,
+}
+
+fn default_piece_style() -> String {
+    "nerd".to_string()
 }
 
 impl Default for Config {
@@ -63,6 +70,19 @@ impl Default for UiConfig {
             flip_board: false,
             show_coordinates: true,
             highlight_last_move: true,
+            piece_style: "nerd".to_string(),
+        }
+    }
+}
+
+impl UiConfig {
+    /// Get the piece style enum from the config string
+    pub fn get_piece_style(&self) -> crate::chess::PieceStyle {
+        match self.piece_style.to_lowercase().as_str() {
+            "unicode" => crate::chess::PieceStyle::Unicode,
+            "nerd" | "nerdfont" | "nerd_font" => crate::chess::PieceStyle::NerdFont,
+            "ascii" | "letter" | "letters" => crate::chess::PieceStyle::Ascii,
+            _ => crate::chess::PieceStyle::NerdFont,
         }
     }
 }

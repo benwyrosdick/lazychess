@@ -573,24 +573,32 @@ impl App {
             .style(ratatui::style::Style::default().bg(ratatui::style::Color::Blue));
         frame.render_widget(title_widget, main_chunks[0]);
 
-        // Main content: horizontal split into board | analysis | moves
+        // Main content: horizontal split into (board + analysis) | moves
         let content_chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([
-                Constraint::Length(22), // Board (8*2 + coords + borders)
-                Constraint::Min(30),    // Analysis
-                Constraint::Length(20), // Move history
+                Constraint::Min(40),    // Left side (board + analysis)
+                Constraint::Length(22), // Move history
             ])
             .split(main_chunks[1]);
 
-        // Board panel (board + status)
+        // Left panel: board on top, analysis below
+        let left_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(20), // Board (8*2 rows + 2 border + 1 coords + 1 status)
+                Constraint::Min(8),     // Analysis
+            ])
+            .split(content_chunks[0]);
+
+        // Board area (board + status)
         let board_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Min(10),   // Board
                 Constraint::Length(1), // Status
             ])
-            .split(content_chunks[0]);
+            .split(left_chunks[0]);
 
         // Render board
         let board_widget = BoardWidget::new(&self.game, &self.config.ui);
@@ -602,11 +610,11 @@ impl App {
 
         // Render analysis panel
         let analysis_widget = AnalysisWidget::new(&self.analysis, self.game.position(), self.config.engine.multipv);
-        frame.render_widget(analysis_widget, content_chunks[1]);
+        frame.render_widget(analysis_widget, left_chunks[1]);
 
         // Render move history
         let moves_widget = MovesWidget::new(&self.game, self.move_scroll);
-        frame.render_widget(moves_widget, content_chunks[2]);
+        frame.render_widget(moves_widget, content_chunks[1]);
 
         // Render input bar
         let input_widget = InputWidget::new(&self.input);

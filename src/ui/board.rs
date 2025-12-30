@@ -6,7 +6,7 @@ use ratatui::{
 };
 use shakmaty::{File, Move, Rank, Square};
 
-use crate::chess::{piece_to_unicode, Game};
+use crate::chess::{piece_to_char, Game, PieceStyle};
 use crate::config::UiConfig;
 
 /// Chess board widget
@@ -14,6 +14,7 @@ pub struct BoardWidget<'a> {
     game: &'a Game,
     config: &'a UiConfig,
     last_move: Option<&'a Move>,
+    piece_style: PieceStyle,
 }
 
 impl<'a> BoardWidget<'a> {
@@ -22,6 +23,7 @@ impl<'a> BoardWidget<'a> {
             game,
             config,
             last_move: game.last_move(),
+            piece_style: config.get_piece_style(),
         }
     }
 
@@ -30,7 +32,7 @@ impl<'a> BoardWidget<'a> {
         if is_light {
             Color::Rgb(240, 217, 181) // Light square
         } else {
-            Color::Rgb(181, 136, 99)  // Dark square
+            Color::Rgb(181, 136, 99) // Dark square
         }
     }
 
@@ -39,7 +41,7 @@ impl<'a> BoardWidget<'a> {
         if is_light {
             Color::Rgb(205, 210, 106) // Light highlight
         } else {
-            Color::Rgb(170, 162, 58)  // Dark highlight
+            Color::Rgb(170, 162, 58) // Dark highlight
         }
     }
 
@@ -66,25 +68,26 @@ impl Widget for BoardWidget<'_> {
         let inner = block.inner(area);
         block.render(area, buf);
 
-        if inner.width < 18 || inner.height < 10 {
+        if inner.width < 26 || inner.height < 10 {
             // Not enough space to render board
             return;
         }
 
-        // Calculate cell size (2 chars wide, 1 char tall per square)
-        let cell_width = 2u16;
-        let cell_height = 1u16;
+        // Calculate cell size (4 chars wide, 2 chars tall per square for better visibility)
+        let cell_width = 4u16;
+        let cell_height = 2u16;
 
         // Board dimensions
-        let _board_width = 8 * cell_width;
+        let board_width = 8 * cell_width;
         let board_height = 8 * cell_height;
 
         // Coordinates width
-        let coord_width = if self.config.show_coordinates { 2 } else { 0 };
+        let coord_width = if self.config.show_coordinates { 3 } else { 0 };
         let _coord_height = if self.config.show_coordinates { 1 } else { 0 };
 
-        // Center the board in the available space
-        let start_x = inner.x + coord_width;
+        // Center the board horizontally in the available space
+        let total_width = board_width + coord_width;
+        let start_x = inner.x + (inner.width.saturating_sub(total_width)) / 2 + coord_width;
         let start_y = inner.y;
 
         // Determine rank/file order based on flip
@@ -102,53 +105,60 @@ impl Widget for BoardWidget<'_> {
 
         // Render the board
         for (row_idx, &rank) in ranks.iter().enumerate() {
-            let y = start_y + (row_idx as u16 * cell_height);
+            for row_line in 0..cell_height {
+                let y = start_y + (row_idx as u16 * cell_height) + row_line;
 
-            // Render rank coordinate
-            if self.config.show_coordinates && start_x >= 2 {
-                let rank_char = (b'1' + rank as u8) as char;
-                buf.set_string(
-                    start_x - 2,
-                    y,
-                    format!("{} ", rank_char),
-                    Style::default().fg(Color::DarkGray),
-                );
-            }
+                if y >= inner.y + inner.height {
+                    continue;
+                }
 
-            for (col_idx, &file) in files.iter().enumerate() {
-                let x = start_x + (col_idx as u16 * cell_width);
-                let square = Square::from_coords(file, rank);
+                // Render rank coordinate (only on first line of cell, centered vertically)
+                if self.config.show_coordinates && row_line == cell_height / 2 {
+                    let rank_char = (b'1' + rank as u8) as char;
+                    buf.set_string(
+                        start_x.saturating_sub(2),
+                        y,
+                        format!("{}", rank_char),
+                        Style::default().fg(Color::DarkGray),
+                    );
+                }
 
-                // Determine background color
-                let bg_color = if self.is_highlighted(square) {
-                    self.get_highlight_color(file, rank)
-                } else {
-                    self.get_square_color(file, rank)
-                };
+                for (col_idx, &file) in files.iter().enumerate() {
+                    let x = start_x + (col_idx as u16 * cell_width);
+                    let square = Square::from_coords(file, rank);
 
-                // Get piece at square
-                let piece_char = self
-                    .game
-                    .piece_at(square)
-                    .map(piece_to_unicode)
-                    .unwrap_or(' ');
-
-                // Determine piece color (black pieces on dark squares need contrast)
-                let fg_color = if let Some(piece) = self.game.piece_at(square) {
-                    if piece.color == shakmaty::Color::White {
-                        Color::White
+                    // Determine background color
+                    let bg_color = if self.is_highlighted(square) {
+                        self.get_highlight_color(file, rank)
                     } else {
-                        Color::Black
+                        self.get_square_color(file, rank)
+                    };
+
+                    let style = Style::default().bg(bg_color);
+
+                    // Fill the entire cell with background color first
+                    let blank_cell = "    ";
+                    buf.set_string(x, y, blank_cell, style);
+
+                    // Get piece at square (only show on middle row)
+                    if row_line == cell_height / 2 {
+                        if let Some(piece) = self.game.piece_at(square) {
+                            let piece_char = piece_to_char(piece, self.piece_style);
+
+                            // Determine piece color
+                            let fg_color = if piece.color == shakmaty::Color::White {
+                                Color::White
+                            } else {
+                                Color::Black
+                            };
+
+                            let piece_style = Style::default().fg(fg_color).bg(bg_color);
+
+                            // Render piece centered in cell (position 1 of 0-3)
+                            buf.set_string(x + 1, y, format!("{}", piece_char), piece_style);
+                        }
                     }
-                } else {
-                    bg_color
-                };
-
-                let style = Style::default().fg(fg_color).bg(bg_color);
-
-                // Render the square (2 chars wide: space + piece)
-                let cell = format!("{} ", piece_char);
-                buf.set_string(x, y, &cell, style);
+                }
             }
         }
 
@@ -157,12 +167,12 @@ impl Widget for BoardWidget<'_> {
             let y = start_y + board_height;
             if y < inner.y + inner.height {
                 for (col_idx, &file) in files.iter().enumerate() {
-                    let x = start_x + (col_idx as u16 * cell_width);
+                    let x = start_x + (col_idx as u16 * cell_width) + 1;
                     let file_char = (b'a' + file as u8) as char;
                     buf.set_string(
                         x,
                         y,
-                        format!("{} ", file_char),
+                        format!("{}", file_char),
                         Style::default().fg(Color::DarkGray),
                     );
                 }
@@ -207,15 +217,30 @@ impl Widget for StatusWidget<'_> {
             format!("{} to move", turn_str)
         };
 
+        // Use nerd font chess king for turn indicator
         let turn_indicator = if turn == shakmaty::Color::White {
-            "♔"
+            "\u{f43f}" // nf-fa-chess_king
         } else {
-            "♚"
+            "\u{f43f}" // same icon, different context
         };
 
-        let text = format!("{} {}", turn_indicator, status);
-        let style = Style::default().fg(Color::White);
+        let indicator_color = if turn == shakmaty::Color::White {
+            Color::White
+        } else {
+            Color::DarkGray
+        };
 
-        buf.set_string(area.x, area.y, &text, style);
+        buf.set_string(
+            area.x + 1,
+            area.y,
+            turn_indicator,
+            Style::default().fg(indicator_color),
+        );
+        buf.set_string(
+            area.x + 3,
+            area.y,
+            &status,
+            Style::default().fg(Color::White),
+        );
     }
 }

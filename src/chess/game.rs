@@ -242,6 +242,27 @@ pub fn square_to_string(sq: Square) -> String {
     sq.to_string()
 }
 
+/// Piece style for rendering
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub enum PieceStyle {
+    /// Standard Unicode chess symbols (♔♕♖♗♘♙)
+    #[default]
+    Unicode,
+    /// Nerd Font icons (requires a Nerd Font)
+    NerdFont,
+    /// ASCII letters (K, Q, R, B, N, P)
+    Ascii,
+}
+
+/// Get the character for a piece based on style
+pub fn piece_to_char(piece: Piece, style: PieceStyle) -> char {
+    match style {
+        PieceStyle::Unicode => piece_to_unicode(piece),
+        PieceStyle::NerdFont => piece_to_nerd_font(piece),
+        PieceStyle::Ascii => piece_to_ascii(piece),
+    }
+}
+
 /// Get the Unicode character for a piece
 pub fn piece_to_unicode(piece: Piece) -> char {
     match (piece.color, piece.role) {
@@ -257,5 +278,35 @@ pub fn piece_to_unicode(piece: Piece) -> char {
         (Color::Black, Role::Bishop) => '♝',
         (Color::Black, Role::Knight) => '♞',
         (Color::Black, Role::Pawn) => '♟',
+    }
+}
+
+/// Get the Nerd Font character for a piece (Font Awesome chess icons)
+/// Note: These are the same icon for both colors - we differentiate by color styling
+pub fn piece_to_nerd_font(piece: Piece) -> char {
+    match piece.role {
+        Role::King => '\u{f0857}',   // nf-fa-chess_king
+        Role::Queen => '\u{f085a}',  // nf-fa-chess_queen
+        Role::Rook => '\u{f085b}',   // nf-fa-chess_rook
+        Role::Bishop => '\u{f085c}', // nf-fa-chess_bishop
+        Role::Knight => '\u{f0858}', // nf-fa-chess_knight
+        Role::Pawn => '\u{f0859}',   // nf-fa-chess_pawn
+    }
+}
+
+/// Get the ASCII character for a piece
+pub fn piece_to_ascii(piece: Piece) -> char {
+    let c = match piece.role {
+        Role::King => 'K',
+        Role::Queen => 'Q',
+        Role::Rook => 'R',
+        Role::Bishop => 'B',
+        Role::Knight => 'N',
+        Role::Pawn => 'P',
+    };
+    if piece.color == Color::White {
+        c
+    } else {
+        c.to_ascii_lowercase()
     }
 }
