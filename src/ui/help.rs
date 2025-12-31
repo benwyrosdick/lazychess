@@ -51,6 +51,7 @@ impl Widget for HelpPopup {
                 ("p", "Pause/resume analysis"),
                 ("d", "Change search depth"),
                 ("m", "Change MultiPV (number of lines)"),
+                ("1-9", "Play move from analysis line N"),
             ]),
             ("Import/Export", vec![
                 ("i", "Import FEN or PGN"),
@@ -63,7 +64,7 @@ impl Widget for HelpPopup {
                 ("?", "Toggle this help"),
             ]),
             ("General", vec![
-                ("Enter", "Execute move (e.g., e4, Nf3, O-O)"),
+                ("Enter, :", "Enter command/move mode"),
                 ("Esc", "Cancel input / close popup"),
                 ("q, Ctrl+C", "Quit"),
             ]),
