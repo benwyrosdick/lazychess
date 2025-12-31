@@ -251,6 +251,7 @@ impl Widget for HelpBarWidget {
                 ("p", "Pause"),
                 ("←/→", "Nav"),
                 ("d", "Depth"),
+                ("m", "Lines"),
                 ("y", "Copy FEN"),
                 ("q", "Quit"),
             ]
