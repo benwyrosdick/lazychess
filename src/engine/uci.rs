@@ -6,7 +6,7 @@ use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::time::Duration;
-use vampirc_uci::{parse_one, UciMessage, UciInfoAttribute, UciOptionConfig};
+use vampirc_uci::{parse_one, UciInfoAttribute, UciMessage, UciOptionConfig};
 
 /// Analysis information from the engine
 #[derive(Debug, Clone, Default)]
@@ -52,7 +52,10 @@ pub enum EngineEvent {
     /// Engine error
     Error(String),
     /// Engine identification
-    Id { name: Option<String>, author: Option<String> },
+    Id {
+        name: Option<String>,
+        author: Option<String>,
+    },
     /// Engine options available
     Option(String),
 }
@@ -81,7 +84,10 @@ impl Engine {
             .with_context(|| format!("Failed to start engine at: {}", path))?;
 
         let stdin = process.stdin.take().context("Failed to get engine stdin")?;
-        let stdout = process.stdout.take().context("Failed to get engine stdout")?;
+        let stdout = process
+            .stdout
+            .take()
+            .context("Failed to get engine stdout")?;
 
         // Create channel for engine events
         let (event_tx, event_rx) = mpsc::channel();

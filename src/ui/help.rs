@@ -41,33 +41,49 @@ impl Widget for HelpPopup {
         block.render(area, buf);
 
         let help_sections = vec![
-            ("Navigation", vec![
-                ("←, h", "Previous move"),
-                ("→, l", "Next move"),
-                ("Home", "Go to start"),
-                ("End", "Go to latest position"),
-            ]),
-            ("Analysis", vec![
-                ("p", "Pause/resume analysis"),
-                ("d", "Change search depth"),
-                ("m", "Change MultiPV (number of lines)"),
-                ("1-9", "Play move from analysis line N"),
-            ]),
-            ("Import/Export", vec![
-                ("i", "Import FEN or PGN"),
-                (":fen <FEN>", "Load position from FEN"),
-                (":pgn", "Enter PGN input mode"),
-                ("y", "Copy current FEN to clipboard"),
-            ]),
-            ("Display", vec![
-                ("f", "Flip board"),
-                ("?", "Toggle this help"),
-            ]),
-            ("General", vec![
-                ("Enter, :", "Enter command/move mode"),
-                ("Esc", "Cancel input / close popup"),
-                ("q, Ctrl+C", "Quit"),
-            ]),
+            (
+                "Navigation",
+                vec![
+                    ("←, h", "Previous move"),
+                    ("→, l", "Next move"),
+                    ("Home", "Go to start"),
+                    ("End", "Go to latest position"),
+                ],
+            ),
+            (
+                "Analysis",
+                vec![
+                    ("p", "Pause/resume analysis"),
+                    ("d", "Change search depth"),
+                    ("m", "Change MultiPV (number of lines)"),
+                    ("1-9", "Play move from analysis line N"),
+                ],
+            ),
+            (
+                "Import/Export",
+                vec![
+                    ("i", "Import FEN or PGN"),
+                    (":fen <FEN>", "Load position from FEN"),
+                    (":pgn", "Enter PGN input mode"),
+                    ("y", "Copy current FEN to clipboard"),
+                ],
+            ),
+            (
+                "Display",
+                vec![
+                    ("f", "Flip board"),
+                    ("e", "Toggle eval-only analysis"),
+                    ("?", "Toggle this help"),
+                ],
+            ),
+            (
+                "General",
+                vec![
+                    ("Enter, :", "Enter command/move mode"),
+                    ("Esc", "Cancel input / close popup"),
+                    ("q, Ctrl+C", "Quit"),
+                ],
+            ),
         ];
 
         let mut lines: Vec<Line> = Vec::new();
@@ -83,10 +99,7 @@ impl Widget for HelpPopup {
 
             for (key, desc) in shortcuts {
                 lines.push(Line::from(vec![
-                    Span::styled(
-                        format!("  {:12}", key),
-                        Style::default().fg(Color::Yellow),
-                    ),
+                    Span::styled(format!("  {:12}", key), Style::default().fg(Color::Yellow)),
                     Span::styled(desc, Style::default().fg(Color::White)),
                 ]));
             }

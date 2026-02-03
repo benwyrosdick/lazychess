@@ -10,9 +10,8 @@ use crate::chess::Game;
 use crate::config::Config;
 use crate::engine::{Engine, EngineEvent};
 use crate::ui::{
-    AnalysisState, AnalysisWidget, BoardWidget, DepthPopup, HelpBarWidget,
-    HelpPopup, ImportPopup, InputMode, InputState, InputWidget, MovesWidget, MultiPVPopup,
-    StatusWidget,
+    AnalysisState, AnalysisWidget, BoardWidget, DepthPopup, HelpBarWidget, HelpPopup, ImportPopup,
+    InputMode, InputState, InputWidget, MovesWidget, MultiPVPopup, StatusWidget,
 };
 
 /// Popup state
@@ -247,7 +246,8 @@ impl App {
                                 }
                                 self.popup = Popup::None;
                                 self.start_analysis()?;
-                                self.input.set_message(format!("MultiPV set to {}", multipv));
+                                self.input
+                                    .set_message(format!("MultiPV set to {}", multipv));
                             } else {
                                 self.input.set_error("MultiPV must be between 1 and 10");
                             }
@@ -319,6 +319,15 @@ impl App {
             }
             KeyCode::Char('f') => {
                 self.config.ui.flip_board = !self.config.ui.flip_board;
+            }
+            KeyCode::Char('e') => {
+                self.config.ui.analysis_eval_only = !self.config.ui.analysis_eval_only;
+                let mode = if self.config.ui.analysis_eval_only {
+                    "Analysis eval-only enabled"
+                } else {
+                    "Analysis eval-only disabled"
+                };
+                self.input.set_message(mode);
             }
             KeyCode::Char('p') => {
                 self.toggle_pause()?;
@@ -558,10 +567,12 @@ impl App {
                     self.input.set_error("Failed to parse engine move");
                 }
             } else {
-                self.input.set_error(format!("No moves in line {}", line_idx + 1));
+                self.input
+                    .set_error(format!("No moves in line {}", line_idx + 1));
             }
         } else {
-            self.input.set_error(format!("No analysis line {}", line_idx + 1));
+            self.input
+                .set_error(format!("No analysis line {}", line_idx + 1));
         }
         Ok(())
     }
@@ -622,11 +633,19 @@ impl App {
             .split(main_chunks[1]);
 
         // Left panel: board on top, analysis below
+        // Calculate board height based on piece style
+        // Block mode: 8*4 cells + 2 border + 1 coords + 2 captured + 1 status = 38
+        // Normal mode: 8*2 cells + 2 border + 1 coords + 2 captured + 1 status = 22
+        let board_height = if self.config.ui.get_piece_style() == crate::chess::PieceStyle::Blocks {
+            38
+        } else {
+            22
+        };
         let left_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(22), // Board (8*2 rows + 2 border + 1 coords + 2 captured + 1 status)
-                Constraint::Min(8),     // Analysis
+                Constraint::Length(board_height),
+                Constraint::Min(8), // Analysis
             ])
             .split(content_chunks[0]);
 
@@ -648,7 +667,12 @@ impl App {
         frame.render_widget(status_widget, board_chunks[1]);
 
         // Render analysis panel
-        let analysis_widget = AnalysisWidget::new(&self.analysis, self.game.position(), self.config.engine.multipv);
+        let analysis_widget = AnalysisWidget::new(
+            &self.analysis,
+            self.game.position(),
+            self.config.engine.multipv,
+            self.config.ui.analysis_eval_only,
+        );
         frame.render_widget(analysis_widget, left_chunks[1]);
 
         // Render move history

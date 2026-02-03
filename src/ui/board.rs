@@ -9,6 +9,99 @@ use shakmaty::{File, Move, Piece, Rank, Role, Square};
 use crate::chess::{piece_to_char, Game, PieceStyle};
 use crate::config::UiConfig;
 
+/// Quarter-block pixel patterns for pieces (6 rows × 10 cols)
+/// Each piece is defined at 2x resolution for smoother rendering
+/// Using quarter blocks gives us 10×6 sub-pixels per 5×3 character cell
+const PAWN_PATTERN: [[bool; 10]; 6] = [
+    [false, false, false, false, true,  true,  false, false, false, false],
+    [false, false, false, true,  true,  true,  true,  false, false, false],
+    [false, false, false, true,  true,  true,  true,  false, false, false],
+    [false, false, false, false, true,  true,  false, false, false, false],
+    [false, false, true,  true,  true,  true,  true,  true,  false, false],
+    [false, true,  true,  true,  true,  true,  true,  true,  true,  false],
+];
+
+const ROOK_PATTERN: [[bool; 10]; 6] = [
+    [false, true,  false, true,  true,  true,  true,  false, true,  false],
+    [false, true,  true,  true,  true,  true,  true,  true,  true,  false],
+    [false, false, true,  true,  true,  true,  true,  true,  false, false],
+    [false, false, true,  true,  true,  true,  true,  true,  false, false],
+    [false, false, true,  true,  true,  true,  true,  true,  false, false],
+    [false, true,  true,  true,  true,  true,  true,  true,  true,  false],
+];
+
+const KNIGHT_PATTERN: [[bool; 10]; 6] = [
+    [false, false, false, true,  true,  true,  false, false, false, false],
+    [false, false, true,  true,  true,  true,  true,  true,  false, false],
+    [false, true,  true,  true,  true,  true,  true,  true,  false, false],
+    [false, false, false, false, true,  true,  true,  true,  false, false],
+    [false, false, false, true,  true,  true,  true,  true,  false, false],
+    [false, true,  true,  true,  true,  true,  true,  true,  true,  false],
+];
+
+const BISHOP_PATTERN: [[bool; 10]; 6] = [
+    [false, false, false, false, true,  true,  false, false, false, false],
+    [false, false, false, true,  false, false, true,  false, false, false],
+    [false, false, true,  true,  true,  true,  true,  true,  false, false],
+    [false, false, false, true,  true,  true,  true,  false, false, false],
+    [false, false, true,  true,  true,  true,  true,  true,  false, false],
+    [false, true,  true,  true,  true,  true,  true,  true,  true,  false],
+];
+
+const QUEEN_PATTERN: [[bool; 10]; 6] = [
+    [false, true,  false, false, true,  true,  false, false, true,  false],
+    [false, true,  true,  false, true,  true,  false, true,  true,  false],
+    [false, false, true,  true,  true,  true,  true,  true,  false, false],
+    [false, false, true,  true,  true,  true,  true,  true,  false, false],
+    [false, false, true,  true,  true,  true,  true,  true,  false, false],
+    [false, true,  true,  true,  true,  true,  true,  true,  true,  false],
+];
+
+const KING_PATTERN: [[bool; 10]; 6] = [
+    [false, false, false, false, true,  true,  false, false, false, false],
+    [false, false, true,  true,  true,  true,  true,  true,  false, false],
+    [false, false, false, false, true,  true,  false, false, false, false],
+    [false, false, true,  true,  true,  true,  true,  true,  false, false],
+    [false, false, true,  true,  true,  true,  true,  true,  false, false],
+    [false, true,  true,  true,  true,  true,  true,  true,  true,  false],
+];
+
+/// Get the pixel pattern for a piece role
+fn get_piece_pattern(role: Role) -> &'static [[bool; 10]; 6] {
+    match role {
+        Role::Pawn => &PAWN_PATTERN,
+        Role::Rook => &ROOK_PATTERN,
+        Role::Knight => &KNIGHT_PATTERN,
+        Role::Bishop => &BISHOP_PATTERN,
+        Role::Queen => &QUEEN_PATTERN,
+        Role::King => &KING_PATTERN,
+    }
+}
+
+/// Convert 4 sub-pixels (2×2 quadrants) to a quarter-block character
+/// Order: top-left, top-right, bottom-left, bottom-right
+fn quadrants_to_char(tl: bool, tr: bool, bl: bool, br: bool) -> char {
+    match (tl, tr, bl, br) {
+        (false, false, false, false) => ' ',
+        (false, false, false, true)  => '▗',
+        (false, false, true,  false) => '▖',
+        (false, false, true,  true)  => '▄',
+        (false, true,  false, false) => '▝',
+        (false, true,  false, true)  => '▐',
+        (false, true,  true,  false) => '▞',
+        (false, true,  true,  true)  => '▟',
+        (true,  false, false, false) => '▘',
+        (true,  false, false, true)  => '▚',
+        (true,  false, true,  false) => '▌',
+        (true,  false, true,  true)  => '▙',
+        (true,  true,  false, false) => '▀',
+        (true,  true,  false, true)  => '▜',
+        (true,  true,  true,  false) => '▛',
+        (true,  true,  true,  true)  => '█',
+    }
+}
+
+
 /// Chess board widget
 pub struct BoardWidget<'a> {
     game: &'a Game,
@@ -61,7 +154,13 @@ impl<'a> BoardWidget<'a> {
         };
 
         // Build horizontal display string
-        let piece_order = [Role::Queen, Role::Rook, Role::Bishop, Role::Knight, Role::Pawn];
+        let piece_order = [
+            Role::Queen,
+            Role::Rook,
+            Role::Bishop,
+            Role::Knight,
+            Role::Pawn,
+        ];
         let mut display_parts: Vec<(String, Color)> = Vec::new();
 
         for role in piece_order {
@@ -73,7 +172,13 @@ impl<'a> BoardWidget<'a> {
                     shakmaty::Color::White
                 };
                 let piece = Piece { color, role };
-                let piece_char = piece_to_char(piece, self.piece_style);
+                // Use Unicode for captured pieces display (blocks don't work inline)
+                let style_for_captured = if self.piece_style == PieceStyle::Blocks {
+                    PieceStyle::Unicode
+                } else {
+                    self.piece_style
+                };
+                let piece_char = piece_to_char(piece, style_for_captured);
 
                 let fg_color = if piece.color == shakmaty::Color::White {
                     Color::White
@@ -145,9 +250,7 @@ impl<'a> BoardWidget<'a> {
 
 impl Widget for BoardWidget<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .title(" Board ");
+        let block = Block::default().borders(Borders::ALL).title(" Board ");
 
         let inner = block.inner(area);
         block.render(area, buf);
@@ -157,9 +260,18 @@ impl Widget for BoardWidget<'_> {
             return;
         }
 
-        // Calculate cell size (4 chars wide, 2 chars tall per square for better visibility)
-        let cell_width = 4u16;
-        let cell_height = 2u16;
+        // Calculate cell size based on piece style
+        // Blocks mode uses 7×4 cells (visually ~square since chars are ~2:1 tall:wide)
+        // The 5×3 piece pattern is centered within the cell
+        let (cell_width, cell_height) = if self.piece_style == PieceStyle::Blocks {
+            (7u16, 4u16)
+        } else {
+            (4u16, 2u16)
+        };
+
+        // Piece pattern dimensions for centering (blocks mode only)
+        let piece_width = 5u16;
+        let piece_height = 3u16;
 
         // Board dimensions
         let board_width = 8 * cell_width;
@@ -231,25 +343,65 @@ impl Widget for BoardWidget<'_> {
                     let style = Style::default().bg(bg_color);
 
                     // Fill the entire cell with background color first
-                    let blank_cell = "    ";
-                    buf.set_string(x, y, blank_cell, style);
+                    let blank_cell: String = " ".repeat(cell_width as usize);
+                    buf.set_string(x, y, &blank_cell, style);
 
-                    // Get piece at square (only show on middle row)
-                    if row_line == cell_height / 2 {
-                        if let Some(piece) = self.game.piece_at(square) {
-                            let piece_char = piece_to_char(piece, self.piece_style);
+                    // Get piece at square and render it
+                    if let Some(piece) = self.game.piece_at(square) {
+                        if self.piece_style == PieceStyle::Blocks {
+                            // Render block-style piece using quarter blocks
+                            // Center horizontally, bottom-align vertically
+                            let x_offset = (cell_width - piece_width) / 2; // 1
+                            let y_offset = cell_height - piece_height; // 1 (bottom-aligned)
 
-                            // Determine piece color
-                            let fg_color = if piece.color == shakmaty::Color::White {
-                                Color::White
-                            } else {
-                                Color::Black
-                            };
+                            // Only render piece in the rows that contain the pattern
+                            if row_line >= y_offset && row_line < y_offset + piece_height {
+                                let pattern = get_piece_pattern(piece.role);
+                                let fg_color = if piece.color == shakmaty::Color::White {
+                                    Color::White
+                                } else {
+                                    Color::Black
+                                };
 
-                            let piece_style = Style::default().fg(fg_color).bg(bg_color);
+                                let pattern_row = row_line - y_offset;
+                                // Each row_line maps to 2 sub-pixel rows in the pattern
+                                let top_row = pattern_row as usize * 2;
+                                let bot_row = top_row + 1;
 
-                            // Render piece centered in cell (position 1 of 0-3)
-                            buf.set_string(x + 1, y, format!("{}", piece_char), piece_style);
+                                // Each character covers 2 sub-pixel columns
+                                for col in 0..piece_width {
+                                    let left_col = col as usize * 2;
+                                    let right_col = left_col + 1;
+
+                                    let tl = pattern[top_row][left_col];
+                                    let tr = pattern[top_row][right_col];
+                                    let bl = pattern[bot_row][left_col];
+                                    let br = pattern[bot_row][right_col];
+
+                                    let ch = quadrants_to_char(tl, tr, bl, br);
+
+                                    // For quarter blocks, we use fg for filled pixels
+                                    let cell_style = Style::default().fg(fg_color).bg(bg_color);
+                                    buf.set_string(x + x_offset + col, y, ch.to_string(), cell_style);
+                                }
+                            }
+                        } else {
+                            // Render single-character piece (only on middle row)
+                            if row_line == cell_height / 2 {
+                                let piece_char = piece_to_char(piece, self.piece_style);
+
+                                // Determine piece color
+                                let fg_color = if piece.color == shakmaty::Color::White {
+                                    Color::White
+                                } else {
+                                    Color::Black
+                                };
+
+                                let piece_style = Style::default().fg(fg_color).bg(bg_color);
+
+                                // Render piece centered in cell (position 1 of 0-3)
+                                buf.set_string(x + 1, y, format!("{}", piece_char), piece_style);
+                            }
                         }
                     }
                 }
@@ -261,7 +413,9 @@ impl Widget for BoardWidget<'_> {
             let y = start_y + board_height;
             if y < inner.y + inner.height {
                 for (col_idx, &file) in files.iter().enumerate() {
-                    let x = start_x + (col_idx as u16 * cell_width) + 1;
+                    // Center the letter in the cell
+                    let offset = cell_width / 2;
+                    let x = start_x + (col_idx as u16 * cell_width) + offset;
                     let file_char = (b'a' + file as u8) as char;
                     buf.set_string(
                         x,
@@ -349,5 +503,3 @@ impl Widget for StatusWidget<'_> {
         );
     }
 }
-
-

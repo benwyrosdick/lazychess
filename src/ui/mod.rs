@@ -1,11 +1,11 @@
-mod board;
 mod analysis;
-mod moves;
-mod input;
+mod board;
 mod help;
+mod input;
+mod moves;
 
-pub use board::*;
 pub use analysis::*;
-pub use moves::*;
-pub use input::*;
+pub use board::*;
 pub use help::*;
+pub use input::*;
+pub use moves::*;

@@ -1,7 +1,9 @@
 #![allow(dead_code)]
 
 use anyhow::{Context, Result};
-use shakmaty::{fen::Fen, san::San, CastlingMode, Chess, Color, Move, Piece, Position, Role, Square};
+use shakmaty::{
+    fen::Fen, san::San, CastlingMode, Chess, Color, Move, Piece, Position, Role, Square,
+};
 
 /// Represents the full game state with move history
 #[derive(Debug, Clone)]
@@ -72,7 +74,10 @@ impl Game {
     /// Get all legal moves in the current position
     pub fn legal_moves(&self) -> Vec<Move> {
         let mut moves = Vec::new();
-        self.position.legal_moves().into_iter().for_each(|m| moves.push(m));
+        self.position
+            .legal_moves()
+            .into_iter()
+            .for_each(|m| moves.push(m));
         moves
     }
 
@@ -161,7 +166,11 @@ impl Game {
     fn rebuild_position(&mut self) {
         self.position = self.initial_position.clone();
         for m in &self.moves[..self.current_index] {
-            self.position = self.position.clone().play(m).expect("Stored move should be valid");
+            self.position = self
+                .position
+                .clone()
+                .play(m)
+                .expect("Stored move should be valid");
         }
     }
 
@@ -259,8 +268,14 @@ impl Game {
 
         for (role, starting_count) in starting_material {
             // Count how many of this piece type each side currently has
-            let white_count = board.by_color(Color::White).intersect(board.by_role(role)).count() as u8;
-            let black_count = board.by_color(Color::Black).intersect(board.by_role(role)).count() as u8;
+            let white_count = board
+                .by_color(Color::White)
+                .intersect(board.by_role(role))
+                .count() as u8;
+            let black_count = board
+                .by_color(Color::Black)
+                .intersect(board.by_role(role))
+                .count() as u8;
 
             // White captured = starting black pieces - current black pieces
             let white_captures = starting_count.saturating_sub(black_count);
@@ -292,8 +307,14 @@ impl Game {
         let mut balance = 0;
 
         for (role, value) in piece_values {
-            let white_count = board.by_color(Color::White).intersect(board.by_role(role)).count() as i32;
-            let black_count = board.by_color(Color::Black).intersect(board.by_role(role)).count() as i32;
+            let white_count = board
+                .by_color(Color::White)
+                .intersect(board.by_role(role))
+                .count() as i32;
+            let black_count = board
+                .by_color(Color::Black)
+                .intersect(board.by_role(role))
+                .count() as i32;
             balance += (white_count - black_count) * value;
         }
 
@@ -316,6 +337,8 @@ pub enum PieceStyle {
     NerdFont,
     /// ASCII letters (K, Q, R, B, N, P)
     Ascii,
+    /// Pixel art using block characters
+    Blocks,
 }
 
 /// Get the character for a piece based on style
@@ -324,6 +347,8 @@ pub fn piece_to_char(piece: Piece, style: PieceStyle) -> char {
         PieceStyle::Unicode => piece_to_unicode(piece),
         PieceStyle::NerdFont => piece_to_nerd_font(piece),
         PieceStyle::Ascii => piece_to_ascii(piece),
+        // Blocks mode uses pixel patterns, fall back to Unicode for single-char contexts
+        PieceStyle::Blocks => piece_to_unicode(piece),
     }
 }
 

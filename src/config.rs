@@ -36,6 +36,9 @@ pub struct UiConfig {
     /// Piece display style: "unicode", "nerd", or "ascii"
     #[serde(default = "default_piece_style")]
     pub piece_style: String,
+    /// Show only the evaluation line in analysis panel
+    #[serde(default)]
+    pub analysis_eval_only: bool,
 }
 
 fn default_piece_style() -> String {
@@ -71,6 +74,7 @@ impl Default for UiConfig {
             show_coordinates: true,
             highlight_last_move: true,
             piece_style: "nerd".to_string(),
+            analysis_eval_only: false,
         }
     }
 }
@@ -82,6 +86,7 @@ impl UiConfig {
             "unicode" => crate::chess::PieceStyle::Unicode,
             "nerd" | "nerdfont" | "nerd_font" => crate::chess::PieceStyle::NerdFont,
             "ascii" | "letter" | "letters" => crate::chess::PieceStyle::Ascii,
+            "blocks" | "block" | "pixel" | "pixels" => crate::chess::PieceStyle::Blocks,
             _ => crate::chess::PieceStyle::NerdFont,
         }
     }

@@ -20,7 +20,11 @@ use config::Config;
 
 #[derive(Parser, Debug)]
 #[command(name = "lazychess")]
-#[command(author, version, about = "A chess analysis TUI with Stockfish integration")]
+#[command(
+    author,
+    version,
+    about = "A chess analysis TUI with Stockfish integration"
+)]
 struct Args {
     /// FEN string to load initially
     #[arg(short, long)]

@@ -17,15 +17,16 @@ pub struct MovesWidget<'a> {
 
 impl<'a> MovesWidget<'a> {
     pub fn new(game: &'a Game, scroll_offset: usize) -> Self {
-        Self { game, _scroll_offset: scroll_offset }
+        Self {
+            game,
+            _scroll_offset: scroll_offset,
+        }
     }
 }
 
 impl Widget for MovesWidget<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .title(" Moves ");
+        let block = Block::default().borders(Borders::ALL).title(" Moves ");
 
         let inner = block.inner(area);
         block.render(area, buf);
@@ -105,7 +106,8 @@ impl Widget for MovesWidget<'_> {
             current_line.saturating_sub(visible_height / 2)
         } else {
             0
-        }.min(total_lines.saturating_sub(visible_height));
+        }
+        .min(total_lines.saturating_sub(visible_height));
 
         let paragraph = Paragraph::new(lines).scroll((scroll as u16, 0));
         paragraph.render(inner, buf);

@@ -191,7 +191,11 @@ impl Widget for InputWidget<'_> {
                 InputMode::Fen => ">",
                 InputMode::Pgn => "PGN>",
             };
-            (prefix, self.state.buffer.as_str(), Style::default().fg(Color::White))
+            (
+                prefix,
+                self.state.buffer.as_str(),
+                Style::default().fg(Color::White),
+            )
         };
 
         // Render prefix
@@ -203,7 +207,8 @@ impl Widget for InputWidget<'_> {
         buf.set_string(content_x, inner.y, content, style);
 
         // Render cursor (only in input modes and when showing buffer)
-        if self.state.is_input_mode() && self.state.error.is_none() && self.state.message.is_none() {
+        if self.state.is_input_mode() && self.state.error.is_none() && self.state.message.is_none()
+        {
             let cursor_x = content_x + self.state.cursor as u16;
             if cursor_x < inner.x + inner.width {
                 let cursor_char = self
@@ -216,9 +221,7 @@ impl Widget for InputWidget<'_> {
                     cursor_x,
                     inner.y,
                     cursor_char.to_string(),
-                    Style::default()
-                        .fg(Color::Black)
-                        .bg(Color::White),
+                    Style::default().fg(Color::Black).bg(Color::White),
                 );
             }
         }
@@ -239,15 +242,13 @@ impl HelpBarWidget {
 impl Widget for HelpBarWidget {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let shortcuts = if self.show_input_help {
-            vec![
-                ("Enter", "Submit"),
-                ("Esc", "Cancel"),
-            ]
+            vec![("Enter", "Submit"), ("Esc", "Cancel")]
         } else {
             vec![
                 ("?", "Help"),
                 ("i", "Import"),
                 ("f", "Flip"),
+                ("e", "Eval"),
                 ("p", "Pause"),
                 ("←/→", "Nav"),
                 ("d", "Depth"),
@@ -264,9 +265,7 @@ impl Widget for HelpBarWidget {
             }
 
             // Key
-            let key_style = Style::default()
-                .fg(Color::Black)
-                .bg(Color::Cyan);
+            let key_style = Style::default().fg(Color::Black).bg(Color::Cyan);
             buf.set_string(x, area.y, format!(" {} ", key), key_style);
             x += key.len() as u16 + 2;
 

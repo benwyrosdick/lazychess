@@ -111,11 +111,22 @@ pub struct AnalysisWidget<'a> {
     state: &'a AnalysisState,
     position: &'a Chess,
     multipv: u32,
+    eval_only: bool,
 }
 
 impl<'a> AnalysisWidget<'a> {
-    pub fn new(state: &'a AnalysisState, position: &'a Chess, multipv: u32) -> Self {
-        Self { state, position, multipv }
+    pub fn new(
+        state: &'a AnalysisState,
+        position: &'a Chess,
+        multipv: u32,
+        eval_only: bool,
+    ) -> Self {
+        Self {
+            state,
+            position,
+            multipv,
+            eval_only,
+        }
     }
 }
 
@@ -129,9 +140,7 @@ impl Widget for AnalysisWidget<'_> {
             " Analysis (stopped) "
         };
 
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .title(status);
+        let block = Block::default().borders(Borders::ALL).title(status);
 
         let inner = block.inner(area);
         block.render(area, buf);
@@ -142,22 +151,19 @@ impl Widget for AnalysisWidget<'_> {
 
         let mut lines: Vec<Line> = Vec::new();
 
-        // Depth and status line
-        let current_depth = self
-            .state
-            .lines
-            .first()
-            .and_then(|l| l.depth)
-            .unwrap_or(0);
+        if !self.eval_only {
+            // Depth and status line
+            let current_depth = self.state.lines.first().and_then(|l| l.depth).unwrap_or(0);
 
-        let depth_line = Line::from(vec![
-            Span::styled("Depth: ", Style::default().fg(Color::DarkGray)),
-            Span::styled(
-                format!("{}/{}", current_depth, self.state.target_depth),
-                Style::default().fg(Color::White),
-            ),
-        ]);
-        lines.push(depth_line);
+            let depth_line = Line::from(vec![
+                Span::styled("Depth: ", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    format!("{}/{}", current_depth, self.state.target_depth),
+                    Style::default().fg(Color::White),
+                ),
+            ]);
+            lines.push(depth_line);
+        }
 
         // Main evaluation (from first line)
         if let Some(first_line) = self.state.lines.first() {
@@ -178,7 +184,12 @@ impl Widget for AnalysisWidget<'_> {
 
             let eval_line = Line::from(vec![
                 Span::styled("Eval: ", Style::default().fg(Color::DarkGray)),
-                Span::styled(score, Style::default().fg(score_color).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    score,
+                    Style::default()
+                        .fg(score_color)
+                        .add_modifier(Modifier::BOLD),
+                ),
             ]);
             lines.push(eval_line);
         } else {
@@ -186,6 +197,12 @@ impl Widget for AnalysisWidget<'_> {
                 Span::styled("Eval: ", Style::default().fg(Color::DarkGray)),
                 Span::styled("---", Style::default().fg(Color::DarkGray)),
             ]));
+        }
+
+        if self.eval_only {
+            let paragraph = Paragraph::new(lines);
+            paragraph.render(inner, buf);
+            return;
         }
 
         lines.push(Line::from(""));
@@ -197,12 +214,18 @@ impl Widget for AnalysisWidget<'_> {
         )));
 
         // Show each PV line
-        for (idx, info) in self.state.lines.iter().take(self.multipv as usize).enumerate() {
+        for (idx, info) in self
+            .state
+            .lines
+            .iter()
+            .take(self.multipv as usize)
+            .enumerate()
+        {
             let score = format_score(info.score_cp, info.score_mate);
 
             // Convert UCI moves to SAN notation
             let san_moves = uci_to_san(self.position, &info.pv);
-            
+
             // Format PV moves (show first few moves)
             let pv_str: String = san_moves
                 .iter()
@@ -222,10 +245,7 @@ impl Widget for AnalysisWidget<'_> {
                     format!("{}. ", idx + 1),
                     Style::default().fg(Color::DarkGray),
                 ),
-                Span::styled(
-                    format!("{:>6} ", score),
-                    Style::default().fg(Color::Yellow),
-                ),
+                Span::styled(format!("{:>6} ", score), Style::default().fg(Color::Yellow)),
                 Span::styled(pv_display, Style::default().fg(Color::White)),
             ]);
             lines.push(line);
