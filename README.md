@@ -4,7 +4,17 @@ TUI for evaluating chess positions with Stockfish.
 
 ![demo](image.png)
 
-## Prerequisites
+## Installation
+
+### Homebrew
+
+```bash
+brew install benwyrosdick/tap/lazychess
+```
+
+This will also install Stockfish as a recommended dependency.
+
+### From Source
 
 Install rust and Stockfish:
 
@@ -12,7 +22,7 @@ Install rust and Stockfish:
 brew install rust stockfish
 ```
 
-## Installation
+Then build and install:
 
 ```bash
 cargo install --path .
